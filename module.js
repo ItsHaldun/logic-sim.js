@@ -7,15 +7,21 @@ Value       State
 */
 
 class Module {
-	constructor(x, y, scale, color=[random(255), random(255), random(255)]) {
+	constructor(x, y, wScale=100, hScale=32, scale=1, color=[random(255), random(255), random(255)]) {
 		this.name = "";
 		this.inputs = [];
 		this.outputs = [];
 
 		this.x = x;
 		this.y = y;
+		this.wScale = wScale;
+		this.hScale = hScale;
+		this.width = wScale*scale;
+		this.height = hScale*scale*max(this.inputs.length, this.outputs.length);
 		this.scale = scale;
 		this.color = color;
+
+		this.clickOffset = [0, 0];
 	}
 
 	setName(name) {
@@ -28,12 +34,14 @@ class Module {
 
 	addInputPins(amount=1) {
 		for (let i=0; i< amount; i++) {
-			this.inputs.push(-1);
+			this.inputs.push(new Pin(true));
 		}
+		this.height = this.hScale*this.scale*max(this.inputs.length, this.outputs.length);
 	}
 
 	removeinputPin() {
 		this.input.pop();
+		this.height = this.hScale*this.scale*max(this.inputs.length, this.outputs.length);
 	}
 
 	setInputPin (pinNo, value=-1) {
@@ -49,7 +57,7 @@ class Module {
 			return false;
 		}
 
-		this.inputs[pinNo] = value;
+		this.inputs[pinNo].state = value;
 	}
 
 	// Sets all input pins
@@ -67,12 +75,14 @@ class Module {
 
 	addOutputPins(amount) {
 		for (let i=0; i< amount; i++) {
-			this.outputs.push(-1);
+			this.outputs.push(new Pin(false));
 		}
+		this.height = this.hScale*this.scale*max(this.inputs.length, this.outputs.length);
 	}
 
 	removeOutputPin() {
 		this.outputs.pop();
+		this.height = this.hScale*this.scale*max(this.inputs.length, this.outputs.length);
 	}
 
 	setOutputPin (pinNo, value=-1) {
@@ -88,7 +98,7 @@ class Module {
 			return false;
 		}
 
-		this.outputs[pinNo] = value;
+		this.outputs[pinNo].state = value;
 	}
 
 	// Sets all output pins
@@ -113,38 +123,48 @@ class Module {
 	}
 
 	draw(font, fontSize=32) {
-		let width = 100*this.scale;
-		let height = 32*this.scale*max(this.inputs.length, this.outputs.length);
-		
 		push();
 		// Draw the Module Box
 		fill(this.color[0], this.color[1], this.color[2]);
 		strokeWeight(4*this.scale);
-		rect(this.x, this.y, width, height);
+		rect(this.x, this.y, this.width, this.height);
 
 		// Draw the Text
 		noStroke();
 		textSize(fontSize*this.scale);
+		textFont(font);
 		let bbox = font.textBounds(this.name, 0, 0);
 		fill(0, 128);
-		rect(this.x + width/2 - (1+1/this.name.length)*bbox.w/2 - bbox.x, this.y + height/2 + bbox.y/2, (1+1/this.name.length)*bbox.w, bbox.h);
+		rect(this.x + this.width/2 - bbox.w/2, this.y + this.height/2 + bbox.y/2, bbox.w, bbox.h);
 		fill(255);
-		text(this.name, this.x + width/2 - (1+1/this.name.length)*bbox.w/2, this.y + height/2 - bbox.y/2);
+		text(this.name, this.x + this.width/2 - bbox.w/2, this.y + this.height/2 - bbox.y/2);
 
 		// Draw the Input Pins
 		fill(0);
 		for (let i=0; i<this.inputs.length; i++) {
-			circle(this.x, this.y + (i+1)*height/(this.inputs.length+1), 20*this.scale);
+			this.inputs[i].draw(this.x, this.y + (i+1)*this.height/(this.inputs.length+1), 20*this.scale, font);
 		}
 
 		// Draw the Output Pins
 		for (let i=0; i<this.outputs.length; i++) {
-			circle(this.x + width, this.y + (i+1)*height/(this.outputs.length+1), 20*this.scale);
+			this.outputs[i].draw(this.x + this.width, this.y + (i+1)*this.height/(this.outputs.length+1), 20*this.scale, font);
 		}
 		pop();
 	}
 
-	dragModule() {
-		return;
+	onPress() {
+		if (mouseX>this.x && mouseX<this.x+this.width && mouseY>this.y && mouseY<this.y+this.height) {
+			this.clickOffset[0] = mouseX-this.x;
+			this.clickOffset[1] = mouseY-this.y;
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	drag() {
+		this.x = mouseX - this.clickOffset[0];
+		this.y = mouseY - this.clickOffset[1];
 	}
 }
