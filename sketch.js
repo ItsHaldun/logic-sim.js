@@ -14,7 +14,6 @@ function setup() {
 	testModule = new Module(100, 100, 1);
 	testModule.addInputPins(2);
 	testModule.addOutputPins(1);
-	testModule.setName("AND");
 }
 
 function draw() {

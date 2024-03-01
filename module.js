@@ -8,7 +8,7 @@ Value       State
 
 class Module {
 	constructor(x, y, scale, color=[random(255), random(255), random(255)]) {
-		this.name = null;
+		this.name = "";
 		this.inputs = [];
 		this.outputs = [];
 
@@ -112,7 +112,7 @@ class Module {
 		return this.outputs;
 	}
 
-	draw(font) {
+	draw(font, fontSize=32) {
 		let width = 100*this.scale;
 		let height = 32*this.scale*max(this.inputs.length, this.outputs.length);
 		
@@ -124,7 +124,7 @@ class Module {
 
 		// Draw the Text
 		noStroke();
-		textSize(32*this.scale);
+		textSize(fontSize*this.scale);
 		let bbox = font.textBounds(this.name, 0, 0);
 		fill(0, 128);
 		rect(this.x + width/2 - (1+1/this.name.length)*bbox.w/2 - bbox.x, this.y + height/2 + bbox.y/2, (1+1/this.name.length)*bbox.w, bbox.h);
