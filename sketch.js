@@ -2,6 +2,10 @@
 var canvas;
 var moduleList;
 var font;
+var playground;
+
+var rightClickMenu;
+var hoveredItem = null;
 
 // Some Drawing Helpers
 var draggedModule = null;
@@ -15,6 +19,9 @@ function preload() {
 function setup() {
   // put setup code here
   canvas = createCanvas(windowWidth, windowHeight-10);
+	canvas.elt.addEventListener("contextmenu", (e) => e.preventDefault());
+	
+	playground = new Playground();
 
 	moduleList = [];
 
@@ -34,29 +41,10 @@ function setup() {
 }
 
 function draw() {
-  // put drawing code here
-  background(40);
+	playground.draw();
 
-	// Hover Detection
-	for (let i=0; i<moduleList.length; i++) {
-		for (let j=0; j<moduleList[i].inputs.length; j++) {
-			if (Math.abs(moduleList[i].inputs[j].x - mouseX) < moduleList[i].inputs[j].size*0.5 && Math.abs(moduleList[i].inputs[j].y - mouseY) < moduleList[i].inputs[j].size*0.5) {
-				moduleList[i].inputs[j].onHover = true;
-			}
-			else {
-				moduleList[i].inputs[j].onHover = false;
-			}
-		}
-
-		for (let j=0; j<moduleList[i].outputs.length; j++) {
-			if (Math.abs(moduleList[i].outputs[j].x - mouseX) < moduleList[i].outputs[j].size*0.5 && Math.abs(moduleList[i].outputs[j].y - mouseY) < moduleList[i].outputs[j].size*0.5) {
-				moduleList[i].outputs[j].onHover = true;
-			}
-			else {
-				moduleList[i].outputs[j].onHover = false;
-			}
-		}
-	}
+	// Hovered Item Detection
+	hoveredItem = detectHover();
 
 	if (draggedModule) {
 		draggedModule.drag();
@@ -106,17 +94,16 @@ function draw() {
 }
 
 function mousePressed() {
-	let moduleIndex = NaN;
-  for (let i=0; i<moduleList.length; i++) {
-		if (moduleList[i].onPress()) {
-			moduleIndex = i;
+	// Open Menu if right clicked
+	if(mouseButton === RIGHT) {
+		print(hoveredItem);
+		return;
+	}
+
+	if(mouseButton === LEFT) {
+		if(hoveredItem instanceof Module) {
+			draggedModule = hoveredItem;
 		}
-	}
-	if (moduleIndex != NaN) {
-		draggedModule = moduleList[moduleIndex];
-	}
-	else {
-		draggedModule = null;
 	}
 }
 
@@ -127,44 +114,30 @@ function mouseReleased() {
 }
 
 function mouseClicked() {
-	// Detects if clicked on a Pin
-	if (!draggedModule) {
-		for (let i=0; i<moduleList.length; i++) {
-			for (let j=0; j<moduleList[i].inputs.length; j++) {
-				if (Math.abs(moduleList[i].inputs[j].x - mouseX) < moduleList[i].inputs[j].size*0.5 && Math.abs(moduleList[i].inputs[j].y - mouseY) < moduleList[i].inputs[j].size*0.5) {
-					if (clickedPin == null) {
-						clickedPin = moduleList[i].inputs[j];
-					}
-					else if (clickedPin != moduleList[i].inputs[j]){
-						// If the chosen connection is not already established, do it
-						if (!listContainsList(connections, [clickedPin, moduleList[i].inputs[j]])) {
-							connections.push([clickedPin, moduleList[i].inputs[j]]);
-						}
-						// If it is already established, remove it
-						else {
-							connections.splice(indexOfList(connections, [clickedPin, moduleList[i].inputs[j]]), 1);
-						}
-						clickedPin = null;
-					}
-				}
+	if (mouseButton === LEFT) {
+		// Detects if clicked on a Pin
+		if (!draggedModule && (hoveredItem instanceof Pin)) {
+			if (clickedPin == null) {
+				clickedPin = hoveredItem;
 			}
-			for (let j=0; j<moduleList[i].outputs.length; j++) {
-				if (Math.abs(moduleList[i].outputs[j].x - mouseX) < moduleList[i].outputs[j].size*0.5 && Math.abs(moduleList[i].outputs[j].y - mouseY) < moduleList[i].outputs[j].size*0.5) {
-					if (clickedPin == null) {
-						clickedPin = moduleList[i].outputs[j];
-					}
-					else if (clickedPin != moduleList[i].outputs[j]){
-						// If the chosen connection is not already established, do it
-						if (!listContainsList(connections, [moduleList[i].outputs[j], clickedPin])) {
-							connections.push([moduleList[i].outputs[j], clickedPin]);
-						}
-						// If it is already established, remove it
-						else {
-							connections.splice(indexOfList(connections, [moduleList[i].outputs[j], clickedPin]), 1);
-						}
-						clickedPin = null;
-					}
+			else if (clickedPin != hoveredItem){
+				let connection;
+				if (hoveredItem.x > clickedPin.x) {
+					connection = [clickedPin, hoveredItem];
 				}
+				else {
+					connection = [hoveredItem, clickedPin];
+				}
+
+				// If the chosen connection is not already established, do it
+				if (!listContainsList(connections, connection)) {
+					connections.push(connection);
+				}
+				// If it is already established, remove it
+				else {
+					connections.splice(indexOfList(connections, connection), 1);
+				}
+				clickedPin = null;
 			}
 		}
 	}
@@ -200,4 +173,41 @@ function listsEqual(a, b) {
     if (a[i] !== b[i]) return false;
   }
   return true;
+}
+
+function detectHover () {
+	// Module Pins Hover Detection
+	if (!draggedModule) {
+		for (let i=0; i<moduleList.length; i++) {
+			for (let j=0; j<moduleList[i].inputs.length; j++) {
+				if (Math.abs(moduleList[i].inputs[j].x - mouseX) < moduleList[i].inputs[j].size*0.5 && Math.abs(moduleList[i].inputs[j].y - mouseY) < moduleList[i].inputs[j].size*0.5) {
+					moduleList[i].inputs[j].onHover = true;
+					return moduleList[i].inputs[j];
+				}
+				else {
+					moduleList[i].inputs[j].onHover = false;
+				}
+			}
+	
+			for (let j=0; j<moduleList[i].outputs.length; j++) {
+				if (Math.abs(moduleList[i].outputs[j].x - mouseX) < moduleList[i].outputs[j].size*0.5 && Math.abs(moduleList[i].outputs[j].y - mouseY) < moduleList[i].outputs[j].size*0.5) {
+					moduleList[i].outputs[j].onHover = true;
+					return moduleList[i].outputs[j];
+				}
+				else {
+					moduleList[i].outputs[j].onHover = false;
+				}
+			}
+		}
+	}
+
+	// Module Hover Detection
+	for (let i=0; i<moduleList.length; i++) {
+		if (moduleList[i].onHover()) {
+			return moduleList[i];
+		}
+	}
+
+	// If nothing else, it's the playground
+	return playground;
 }
